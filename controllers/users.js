@@ -2,6 +2,20 @@ const User = require('../models/schemas/user')
 const Item = require('../models/schemas/item')
 
 exports.markPendingDelivered = (req, res, next) => {
+  User.findById(req.params.userId, (err, user) => {
+    if (err) return next(err)
+    if (!user) return res.status(404).send('No user with id: ' + req.params.userId)
+      for (let order of user.orders) {
+        if (!order.isPaid) {
+          order.isPaid = true
+        }
+      }
+      user.markModified('orders')
+      user.save((err, modifiedUser) => {
+        if (err) return next(err)
+        return res.json(modifiedUser)
+      })
+  })
   return res.sendStatus(501)
 }
 
@@ -42,6 +56,8 @@ function createUser (req, res, next, options) {
   if (req.body.confirm !== req.body.password) {
     return res.status(400).send('Passwords must match')
   }
+
+  // Put in email regex check
 
   const userData = {
     email: req.body.email,

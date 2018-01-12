@@ -3,11 +3,15 @@ const router = express.Router()
 
 const users = require('../controllers/users')
 const items = require('../controllers/items')
+const auth = require('../controllers/auth')
 
 
 /*=============================================
 =            Routes for users
 =============================================*/
+router.route('/auth/login')
+  .post(auth.loginUser)
+  
 router.route('/users')
   .get(users.getAllUsers)
 

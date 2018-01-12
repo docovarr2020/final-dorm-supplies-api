@@ -1,4 +1,5 @@
 const Item = require('../models/schemas/item')
+const User = require('../models/schemas/user')
 const config = require('../models/config')
 
 exports.getInStock = (req, res, next) => {
@@ -8,9 +9,63 @@ exports.getInStock = (req, res, next) => {
 	})
 }
 
-// TODO
+
+/*
+req.body = {
+	cart: [{
+		itemId,
+		quantity
+	}],
+	userId
+}
+*/
 exports.createNewOrder = (req, res, next) => {
-	return res.sendStatus(501)
+	const promises = req.body.cart.map(item => Item.findById(item.itemId))
+	Promise.all(promises)
+	.then((items) => {
+		User.findById(req.body.userId)
+		.then((user) => {
+			const cart = req.body.cart
+			const validCart = items.reduce((acc, item, index) => {
+				if (item._id != cart[index].itemId) {
+					throw new Error('Arrays don\'t match up')
+				}
+				if (item.quantity - cart[index].quantity >= 0) {
+					item.quantity -= cart[index].quantity
+				}
+				else {
+					res.status(400).send('Not enough quantity of item: ' + item.name)
+					return false
+				}
+				return acc
+			}, true)
+
+			if (!validCart) return
+
+			const formattedItems = cart.map((item, index) => ({
+				quantity: item.quantity,
+				itemId: item.itemId,
+				price: items[index].price
+			}))
+
+			const newOrder = {
+				items: formattedItems,
+				purchasedDate: new Date(),
+				deliveredDate: null,
+				isPaid: false
+			}
+			user.orders.push(newOrder)
+			user.markModified('orders')
+			const savedItemPromises = items.map((item) => {
+				item.markModified('quantity')
+				return item.save()
+			})
+			Promise.all(savedItemPromises.concat([user.save()]))
+			.then(() => {
+				return res.sendStatus(200)
+			}).catch(next)			
+		}).catch(next)
+	}).catch(next)
 }
 
 // TODO
